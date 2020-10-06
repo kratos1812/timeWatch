@@ -65,6 +65,7 @@ public void OnMapStart()
 public void OnMapEnd()
 {
 	delete g_hTopsMenu;
+	delete g_hMainMenu;
 }
 
 public Action Command_TimeWatch(int client, int args)
@@ -530,15 +531,11 @@ public void OnClientDisconnect(int client)
 
 public void OnClientPostAdminCheck(int client)
 {
-	if(client >= 1 && client <= MaxClients)
+	if(client >= 1 && client <= MaxClients && g_hDatabase != null)
 	{
-		if(g_hTimeManageTimer[client] != null)
-		{
-			delete g_hTimeManageTimer[client];
-			g_hTimeManageTimer[client] = null;
-		}
-		
+		delete g_hTimeManageTimer[client];
 		g_hTimeManageTimer[client] = CreateTimer(1.0, Timer_ManageTimer, client, DEFAULT_TIMER_FLAGS);
+		
 		g_iPlayerUId[client] = 0;
 		for (int i = 0; i < 4; i++)
 			g_iPlayedSeconds[client][i] = 0;
@@ -652,7 +649,7 @@ public void SQLT_OnPlayerUpdated(Database database, DBResultSet results, const c
 
 public Action Timer_ManageTimer(Handle timer, int client)
 {
-	if(client < 1 || client > MaxClients || !IsClientInGame(client))
+	if(client < 1 || client > MaxClients)
 	{
 		g_hTimeManageTimer[client] = null;
 		return Plugin_Stop;
@@ -674,8 +671,11 @@ public Action Timer_UpdateDataForAllClient(Handle timer)
 		if(IsClientInGame(client))
 		{
 			FormatEx(query, sizeof(query), "UPDATE `timeWatch` SET `time_team_none` = time_team_none + '%i', `time_team_spec` = time_team_spec + '%i', `time_team_t` = time_team_t + '%i', `time_team_ct` = time_team_ct + '%i' WHERE `player_id` = '%i' AND `date_string` = '%s';", \
-			g_iPlayedSeconds[client][0], g_iPlayedSeconds[client][1], g_iPlayedSeconds[client][2], g_iPlayedSeconds[client][3], g_iPlayerUId[client], curdate);
+			g_iPlayedSeconds[client][CS_TEAM_NONE], g_iPlayedSeconds[client][CS_TEAM_SPECTATOR], g_iPlayedSeconds[client][CS_TEAM_T], g_iPlayedSeconds[client][CS_TEAM_CT], g_iPlayerUId[client], curdate);
 			g_hDatabase.Query(SQLT_OnPlayerUpdated, query);
+			
+			for (int i = 0; i < 4; i++)
+				g_iPlayedSeconds[client][i] = 0;
 		}
 	}
 }
